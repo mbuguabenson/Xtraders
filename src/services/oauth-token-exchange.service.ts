@@ -6,7 +6,7 @@ export const exchangeCodeForToken = async (code: string) => {
     }
 
     const clientId = process.env.CLIENT_ID || '121856';
-    const redirectUrl = `${window.location.protocol}//${window.location.host}`;
+    const redirectUrl = process.env.REDIRECT_URI || `${window.location.origin}/`;
     
     // Check if hostname implies production
     const isProd = !/^staging\./.test(window.location.hostname) && window.location.hostname.includes('deriv.com');

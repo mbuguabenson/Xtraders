@@ -187,7 +187,9 @@ export const generateOAuthURL = async (prompt?: string) => {
 
         sessionStorage.setItem('oauth_code_verifier', codeVerifier);
 
-        const redirectUrl = `${window.location.protocol}//${window.location.host}`;
+        // Deriv OAuth requires the redirect_uri to exactly match the one registered in the dashboard.
+        // Often, it requires a trailing slash.
+        const redirectUrl = process.env.REDIRECT_URI || `${window.location.origin}/`;
         
         let oauthUrl = `${hostname}auth?scope=trade&response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUrl)}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
 
