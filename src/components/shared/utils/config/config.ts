@@ -163,9 +163,23 @@ export const generateCodeChallenge = async (verifier: string): Promise<string> =
     return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 };
 
+export const legacyGenerateOAuthURL = () => {
+    const is_local = isLocal();
+    const app_id = is_local ? APP_IDS.LOCALHOST : '121856';
+    const login_url = `https://oauth.deriv.com/oauth2/authorize?app_id=${process.env.APP_ID || app_id}&brand=deriv&redirect=home&state=`;
+    return login_url;
+};
+
 export const generateOAuthURL = async (prompt?: string) => {
+    // If we want to force legacy, or if no CLIENT_ID is provided, use legacy
+    if (API_MODE === 'legacy' && !process.env.CLIENT_ID) {
+        return legacyGenerateOAuthURL();
+    }
+
     const clientId = process.env.CLIENT_ID || '121856';
-    const hostname = isProduction() ? 'https://auth.deriv.com/oauth2/' : 'https://staging-auth.deriv.com/oauth2/';
+    
+    // Most users test production Client IDs on localhost. Default to production unless strictly on staging domains.
+    const hostname = window.location.hostname.includes('staging') ? 'https://staging-auth.deriv.com/oauth2/' : 'https://auth.deriv.com/oauth2/';
 
     if (hostname && clientId) {
         const codeVerifier = generateCodeVerifier();
@@ -181,7 +195,7 @@ export const generateOAuthURL = async (prompt?: string) => {
             oauthUrl += `&prompt=${encodeURIComponent(prompt)}`;
         }
 
-        const appId = process.env.VITE_APP_ID || process.env.REACT_APP_Deriv_APP_ID || '121856';
+        const appId = process.env.APP_ID || process.env.VITE_APP_ID || process.env.REACT_APP_Deriv_APP_ID || '121856';
         if (appId) {
             oauthUrl += `&app_id=${encodeURIComponent(appId)}`;
         }
@@ -189,5 +203,5 @@ export const generateOAuthURL = async (prompt?: string) => {
         return oauthUrl;
     }
     
-    return '';
+    return legacyGenerateOAuthURL();
 };
