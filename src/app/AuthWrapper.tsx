@@ -56,12 +56,41 @@ export const AuthWrapper = () => {
                     if (tokenData && tokenData.access_token) {
                         // Store the single access token
                         localStorage.setItem('authToken', tokenData.access_token);
+                        
+                        try {
+                            const { DerivWSAccountsService } = await import('@/services/derivws-accounts.service');
+                            const accounts = await DerivWSAccountsService.fetchAccountsList(tokenData.access_token);
+                            
+                            if (accounts && accounts.length > 0) {
+                                const accountsList: Record<string, string> = {};
+                                const clientAccounts: Record<string, { loginid: string; token: string; currency: string }> = {};
+
+                                accounts.forEach(acc => {
+                                    // For PKCE, we only have one main token, but legacy needs it mapped per account
+                                    accountsList[acc.account_id] = tokenData.access_token;
+                                    clientAccounts[acc.account_id] = {
+                                        loginid: acc.account_id,
+                                        token: tokenData.access_token,
+                                        currency: acc.currency || 'USD'
+                                    };
+                                });
+
+                                localStorage.setItem('accountsList', JSON.stringify(accountsList));
+                                localStorage.setItem('clientAccounts', JSON.stringify(clientAccounts));
+                                localStorage.setItem('active_loginid', accounts[0].account_id);
+                            }
+                        } catch (err) {
+                            console.error('Failed to fetch accounts via WS:', err);
+                        }
+
                         // Clean up URL
                         window.history.replaceState({}, document.title, window.location.pathname);
+                        setIsAuthComplete(true);
+                        return; // Exit early since PKCE handled it
                     }
                 }
 
-                // Tokens are parsed from URL and stored in localStorage
+                // Tokens are parsed from URL and stored in localStorage (Legacy Flow)
                 await setLocalStorageToken(loginInfo, paramsToDelete);
                 URLUtils.filterSearchParams(['lang']);
                 setIsAuthComplete(true);
